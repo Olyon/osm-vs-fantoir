@@ -1,0 +1,191 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Voies ou lieux-dits inconnus d'OSM, classés par nombre d'adresses</title>
+<script src="js/jquery-3.6.4.min.js"></script>
+<script src="js/tablesorter/jquery.tablesorter.js"></script>
+<script src="js/jquery.tablesorter.combined.min.js"></script>
+<script src="js/fonctions.js"></script>
+<link rel="preload" href="css/fonts/opensans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/tablesorter/theme.default.min.css" type="text/css"/>
+<link rel="stylesheet" href="css/style.css" type="text/css"/>
+<link rel="stylesheet" href="css/responsive.css" type="text/css"/>
+
+<script>
+    var menu_labels
+    var table = 'table_top_adresses'
+    var titre = "Voies ou lieux-dits inconnus d'OSM, classés par nombre d'adresses"
+    var nb_lignes_par_page = 250
+
+    function start(){
+        document.title = titre
+        let [a_menus_labels,STATUS_FANTOIR] = get_labels_statut_fantoir()
+        numero_dept = check_url_for_dept()
+        if (numero_dept){
+            $('#input_dept').empty()
+            $('#input_dept')[0].value = numero_dept
+            requete_voies_dept();
+        }
+    }
+    function update_csv_url(dept){
+        $('#bouton_export_csv').empty()
+        $('#bouton_export_csv').append($('<a>').attr('href',"requete_par_dept.py?requete=top_adresses_manquantes&cache=False&dept="+numero_dept+'&format=csv&offset='+offset+'&limit='+nb_lignes_par_page)
+                                               .attr('target','blank')
+                                               .append($('<img>').attr('src','img/export-csv.png')))
+    }
+    function requete_voies_dept(){
+        if (check_form_for_dept()){
+            numero_dept = $('#input_dept')[0].value
+            document.title = titre+' ('+numero_dept+')'
+            offset = check_url_for_offset()
+
+            update_csv_url(numero_dept)
+
+            $('body').css('cursor','progress');
+            $('#wait_ajax').empty()
+                            .css('visibility','visible')
+                            .append($('<p>').append("Recherche des voies et lieux-dits non rapprochés,<br/>avec des adresses..."));
+            $.ajax({
+                url: "top_adresses_manquantes_dept2.py?dept="+numero_dept+'&offset='+offset+'&limit='+nb_lignes_par_page
+            })
+            .done(function( data ){
+                $('body').css('cursor','default');
+                nom_dept = data[0][1]
+                nb_lignes_total = data[0][2]
+
+                if (nb_lignes_total == 1){
+                    titre_bandeau = " unique voie ou lieu-dit inconnu d'OSM, avec adresses"
+                } else {
+                    titre_bandeau = nb_lignes_total+" voies ou lieux-dits inconnus d'OSM,<br/> classés par nombre d'adresses"
+                }
+
+                $('#bandeau h2').empty().append(nom_dept+' ('+numero_dept+')')
+                $('#bandeau h1').empty().append(titre_bandeau)
+
+                $('#'+table).empty()
+                $('.pagination').empty()
+
+                url_map_org_part1 = 'http://www.openstreetmap.org/'
+                url_map_fr_part1 = 'http://tile.openstreetmap.fr/'
+                url_bano_part1 = 'http://tile.openstreetmap.fr/~cquest/leaflet/bano.html'
+                url_edit_part1 = 'http://www.openstreetmap.org/edit?editor='
+                delta = 0.0008
+
+                $('#'+table).empty().append($('<thead>').append($('<tr>').append($('<th>').append('Commune (Insee)'))))
+                $('#'+table+' tr').append($('<th>').append('Code Fantoir'))
+                $('#'+table+' tr').append($('<th>').append('Voie'))
+                $('#'+table+' tr').append($('<th>').append('% adresses certifiées BAN'))
+                $('#'+table+' tr').append($('<th>').attr('colspan','1').append('Carte'))
+                $('#'+table+' tr').append($('<th>').attr('colspan','2').append('Édition'))
+                $('#'+table+' tr').append($('<th>').append('Statut du nom ').append($('<a>').attr('href','http://wiki.openstreetmap.org/wiki/Contribuer_%C3%A0_la_BANO#Typologie_des_anomalies_FANTOIR').append('(wiki)')))
+                    $('#'+table+' tr').append($('<th>').attr('colspan','2').append('Voir la commune sur...'))
+                $('#'+table+' tr').append($('<th>').attr('colspan','2').addClass('string-none').append('Intégrer les adresses'))
+
+                $('#'+table).append($('<tbody>'))
+
+                data = data[1]
+                for (l=0;l<data.length;l++){
+                    let [insee,
+                        nom_com,
+                        voie,
+                        fantoir,
+                        lon,
+                        lat,
+                        nbaddr,
+                        id_statut,
+                        is_place,
+                        certification] = data[l]
+
+                    fantoir_affiche = fantoir
+                    fantoir_dans_relation = 'ok'
+                    has_fantoir = true
+                    if (fantoir[5] == 'b'){
+                        fantoir_affiche = 'Voie sans Fantoir'
+                        fantoir_dans_relation = 'ko'
+                        has_fantoir = false
+                    }
+                    url_marker = '?mlat='+lat+'&mlon='+lon
+                    url_hash_coords = '18/'+lat+'/'+lon
+                    xleft   = lon-delta
+                    xright  = lon+delta
+                    ybottom = lat-delta
+                    ytop    = lat+delta
+
+                    //Commune (INSEE)
+                    $('#'+table).append($('<tr>').attr('id',l).append($('<td>').text(nom_com+' ('+insee+')')))
+                    //Code Fantoir
+                    $('#'+table+' tr:last').append($('<td>').addClass('cell_fantoir').text(fantoir_affiche))
+                    //Voie
+                    $('#'+table+' tr:last').append($('<td>').text(voie))
+                    //Certification
+                    $('#'+table+' tr:last').append($('<td>').text(certification))
+                    //Date de création
+                    // $('#'+table+' tr:last').append($('<td>').text(data[l][7]))
+                    //visu
+                    add_map_link(table,url_map_org_part1+url_marker+'#map='+url_hash_coords,'ORG')
+                    //JOSM
+                    add_josm_link(table,xleft,xright,ybottom,ytop,insee,nom_com)
+                    //iD
+                    add_id_link(table,'http://www.openstreetmap.org/edit?editor=id#map=18/'+lat+'/'+lon,'ID')
+                    // Statut
+                    if (has_fantoir){
+                        add_statut_fantoir(table,l,fantoir,id_statut)
+                    } else {
+                        $('#'+table+' tr:last').addClass('statut_vide').append($('<td>'))
+                    }
+                    //Fantoir
+                    add_map_link(table,'./index.html?insee='+insee,'Pifomètre')
+                    add_map_link(table,'./liste_brute_fantoir.html?insee='+insee,'Topo brut')
+                    add_josm_addr_link(table,insee,nom_com,fantoir,voie,nbaddr,fantoir_dans_relation,is_place)
+                }
+                $('#wait_ajax').css('visibility','hidden');
+
+                //Sticky headers : le tableau scrolle dans son contenant
+                $('#'+table).tablesorter({
+                    widthFixed : true,
+                    headerTemplate : '{content} {icon}', // Add icon for various themes
+                    widgets: [ 'stickyHeaders', 'filter' ],
+                    widgetOptions: {
+                      stickyHeaders_attachTo : '#reponse',
+                      pager_size : '5'
+                    }
+                })
+                .tablesorterPager({
+                    size: 10
+                });
+
+            })
+            history.replaceState("", "", window.location.pathname+"?dept="+numero_dept);
+        };
+    }
+</script>
+</head>
+<body onload="start()">
+    <header>
+        <!--#include file="includes/menu.html" -->
+    </header>
+    <div id="barre-jaune">
+        <span>Département :</span>
+        <form action="javascript:requete_voies_dept()" autocomplete="on">
+            <input type="text" id="input_dept" placeholder="N° de département"></input>
+            <input type="submit" value="Afficher">
+        </form>
+    </div>
+    <div id="bandeau">
+        <div id="descriptif">
+            <h2></h2>
+            <h1>Voies ou lieux-dits inconnus d'OSM,<br/> classés par nombre d'adresses</h1>
+        </div>
+        <div id="bouton_export_csv" title="Exporter la liste courante en CSV"></div>
+        <div id="wait_ajax" class="bas"></div>
+        <div class="pagination"></div>
+    </div>
+    <div id="reponse">
+        <table id="table_top_adresses" class="tablesorter avec_statuts"></table>
+    </div>
+    <footer>
+    <!--#include file="includes/footer.html" -->
+    </footer>
+    <div id="josm_target" style="visibility : hidden"></div>
+</body>
+</html>
