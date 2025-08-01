@@ -1,4 +1,4 @@
-#!./venv37/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from sql import sql_get_data

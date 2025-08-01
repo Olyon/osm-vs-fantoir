@@ -8,6 +8,8 @@
 <script src="js/tablesorter/jquery.tablesorter.js"></script>
 <script src="js/jquery.tablesorter.combined.min.js"></script>
 <script src="js/fonctions.js"></script>
+<script src="https://mottie.github.io/tablesorter/addons/pager/jquery.tablesorter.pager.js"></script>
+
 <link rel="preload" href="css/fonts/opensans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/tablesorter/theme.default.min.css" type="text/css"/>
 <link rel="stylesheet" href="css/style.css" type="text/css"/>
@@ -17,7 +19,89 @@
     var menu_labels
     var table = 'table_top_adresses'
     var titre = "Voies ou lieux-dits inconnus d'OSM, classés par nombre d'adresses"
-    var nb_lignes_par_page = 25000
+
+    
+    var pagerOptions = {
+
+    // target the pager markup - see the HTML block below
+    container: $(".pager"),
+
+    // use this url format "http:/mydatabase.com?page={page}&size={size}&{sortList:col}"
+    ajaxUrl: null,
+
+    // modify the url after all processing has been applied
+    customAjaxUrl: function(table, url) { return url; },
+
+    // ajax error callback from $.tablesorter.showError function
+    // ajaxError: function( config, xhr, settings, exception ) { return exception; };
+    // returning false will abort the error message
+    ajaxError: null,
+
+    // add more ajax settings here
+    // see http://api.jquery.com/jQuery.ajax/#jQuery-ajax-settings
+    ajaxObject: { dataType: 'json' },
+
+    // process ajax so that the data object is returned along with the total number of rows
+    ajaxProcessing: null,
+
+    // Set this option to false if your table data is preloaded into the table, but you are still using ajax
+    processAjaxOnInit: true,
+
+    // output string - default is '{page}/{totalPages}'
+    // possible variables: {size}, {page}, {totalPages}, {filteredPages}, {startRow}, {endRow}, {filteredRows} and {totalRows}
+    // also {page:input} & {startRow:input} will add a modifiable input in place of the value
+    // In v2.27.7, this can be set as a function
+    // output: function(table, pager) { return 'page ' + pager.startRow + ' - ' + pager.endRow; }
+    output: '{startRow:input} – {endRow} / {totalRows} rows',
+
+    // apply disabled classname (cssDisabled option) to the pager arrows when the rows
+    // are at either extreme is visible; default is true
+    updateArrows: true,
+
+    // starting page of the pager (zero based index)
+    page: 0,
+
+    // Number of visible rows - default is 10
+    size: 20,
+
+    // Save pager page & size if the storage script is loaded (requires $.tablesorter.storage in jquery.tablesorter.widgets.js)
+    savePages : true,
+
+    // Saves tablesorter paging to custom key if defined.
+    // Key parameter name used by the $.tablesorter.storage function.
+    // Useful if you have multiple tables defined
+    storageKey:'tablesorter-pager',
+
+    // Reset pager to this page after filtering; set to desired page number (zero-based index),
+    // or false to not change page at filter start
+    pageReset: 0,
+
+    // if true, the table will remain the same height no matter how many records are displayed. The space is made up by an empty
+    // table row set to a height to compensate; default is false
+    fixedHeight: true,
+
+    // remove rows from the table to speed up the sort of large tables.
+    // setting this to false, only hides the non-visible rows; needed if you plan to add/remove rows with the pager enabled.
+    removeRows: false,
+
+    // If true, child rows will be counted towards the pager set size
+    countChildRows: false,
+
+    // css class names of pager arrows
+    cssNext: '.next', // next page arrow
+    cssPrev: '.prev', // previous page arrow
+    cssFirst: '.first', // go to first page arrow
+    cssLast: '.last', // go to last page arrow
+    cssGoto: '.gotoPage', // select dropdown to allow choosing a page
+
+    cssPageDisplay: '.pagedisplay', // location of where the "output" is displayed
+    cssPageSize: '.pagesize', // page size selector - select dropdown that sets the "size" option
+
+    // class added to arrows when at the extremes (i.e. prev/first arrows are "disabled" when on the first page)
+    cssDisabled: 'disabled', // Note there is no period "." in front of this class name
+    cssErrorRow: 'tablesorter-errorRow' // ajax error information row
+
+  };
 
     function start(){
         document.title = titre
@@ -30,13 +114,13 @@
         }
     }
     function update_csv_url(dept){
-        urlCSV = 'top_adresses_manquantes_dept.py?dept='+dept+'&format=csv&offset='+offset+'&limit='+nb_lignes_par_page;
+        urlCSV = 'top_adresses_manquantes_dept2.py?dept='+dept+'&format=csv';
     }
     function requete_voies_dept(){
         if (check_form_for_dept()){
             numero_dept = $('#input_dept')[0].value
             document.title = titre+' ('+numero_dept+')'
-            offset = check_url_for_offset()
+
 
             update_csv_url(numero_dept)
 
@@ -45,7 +129,7 @@
                             .css('visibility','visible')
                             .append($('<p>').append("Recherche des voies et lieux-dits non rapprochés,<br/>avec des adresses..."));
             $.ajax({
-                url: "top_adresses_manquantes_dept.py?dept="+numero_dept+'&offset='+offset+'&limit='+nb_lignes_par_page
+                url: "top_adresses_manquantes_dept2.py?dept="+numero_dept
             })
             .done(function( data ){
                 $('body').css('cursor','default');
@@ -148,25 +232,13 @@
                     widgetOptions: {
                       stickyHeaders_attachTo : '#reponse'
                     }
-                });
-                //---PAGINATION---
-                $('.pagination').append($('<p>').text('Pages :'))
+                })
+                
+                .tablesorterPager(pagerOptions);
 
-                //Page précédente
-                if (offset>0) {
-                    $('.pagination').append($('<a title="Page précédente" href="'+window.location.pathname+"?dept="+numero_dept+'&offset='+(parseFloat(offset)-nb_lignes_par_page)+'"><div id="prec">&laquo;</div></a>'))
-                }
-
-                //Page active
-                $('.pagination').append($('<div>'+(Math.floor(offset/nb_lignes_par_page)+1)+'</div>').addClass('active'))
-
-                //Page suivante
-                if (nb_lignes_total-offset>nb_lignes_par_page) {
-                    $('.pagination').append($('<a title="Page suivante" href="'+window.location.pathname+"?dept="+numero_dept+'&offset='+(parseFloat(offset)+nb_lignes_par_page)+'"><div id="suiv">&raquo;</div></a>'))
-                }
 
             })
-            history.replaceState("", "", window.location.pathname+"?dept="+numero_dept+'&offset='+offset);
+            history.replaceState("", "", window.location.pathname+"?dept="+numero_dept);
         };
     }
 </script>

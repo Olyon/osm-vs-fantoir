@@ -1,4 +1,4 @@
-#!./venv37/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import cgi
@@ -14,7 +14,7 @@ def format_csv(fetch):
 params = cgi.FieldStorage()
 dept = params['dept'].value
 offset = params['offset'].value
-limit = params.getvalue('limit','250')
+limit = params.getvalue('limit','25000')
 format = params.getvalue('format','json')
 
 data_voies = sql_get_data('top_adresses_manquantes_dept',{'dept':dept,'offset':offset,'limit':limit})
