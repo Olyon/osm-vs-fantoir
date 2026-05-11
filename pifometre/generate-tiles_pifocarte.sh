@@ -342,7 +342,7 @@ function pyramide(){
   x1=$3
   y0=$4
   y1=$5
-  root_dir=../pifometre_v3/tiles_pifocarte
+  root_dir=../../pifometre_v3/tiles_pifocarte
 
   for (( z=$zoom; z<=$zoom; ++z )); do
     for (( x=$x0; x<=$x1; ++x )); do
@@ -350,12 +350,12 @@ function pyramide(){
       for (( y=$y0; y<=$y1; ++y )); do
         file="$root_dir/$z/$x/$y.pbf"
         {
-        psql -d bano -U cadastre -tq -c "$(num_convex $z $x $y)" | xxd -r -p ;
-        psql -d bano -U cadastre -tq -c "$(num_point_ban $z $x $y)" | xxd -r -p ;
-        psql -d bano -U cadastre -tq -c "$(num_point_osm $z $x $y)" | xxd -r -p ;
-        psql -d bano -U cadastre -tq -c "$(lieudit_CADASTRE $z $x $y)" | xxd -r -p ;
-        psql -d bano -U cadastre -tq -c "$(place_OSM $z $x $y)" | xxd -r -p ;
-        psql -d bano -U cadastre -tq -c "$(admin $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(num_convex $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(num_point_ban $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(num_point_osm $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(lieudit_CADASTRE $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(place_OSM $z $x $y)" | xxd -r -p ;
+        psql -d bano -U famille -tq -c "$(admin $z $x $y)" | xxd -r -p ;
         } > $file
         du -h $file
       done
@@ -369,9 +369,10 @@ cd $SCRIPT_DIR
 
 # Metro
 # pyramide 6 30 34 21 24
-# pyramide 10 509 511 359 361
+# pyramide 10 518 523 361 369
 # pyramide 11 725 726 995 996
 # pyramide 11 1018 1020 718 720
 # pyramide 12 2036 2040 1436 1440
 # pyramide 13 4072 4080 2872 2880
-pyramide 13 4160 4170 2940 2950
+# pyramide 13 4160 4170 2940 2950
+pyramide 13 4144 4191 2888 2960
